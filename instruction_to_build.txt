@@ -1,0 +1,23 @@
+Hello programmer,
+
+These are the steps to build this code follow carefully.
+
+SDK=3.1.1
+Toolchain=3.1.1
+
+
+
+Step1:- Choose "thingy91x/nrf9151/ns" board target cause it is tested in this board.
+Step2:- choose prj.conf
+Step3:- and genrate and build.
+
+
+Note:-  This code has a free server on which we have sending data this may be expired 
+        So change the CONFIG_HTTP_SAMPLE_HOSTNAME and also CONFIG_HTTP_URL inside the prj.conf
+
+        if you face any connection error in worst case then only try to change CONFIG_LTE_LC_DNS_FALLBACK_ADDRESS
+        by default in this code it is Trex.fi you can try changing it to google.  
+        [This copnnfiguration was to solve IPV6only issue of Jio NB-IOT sim card]        
+
+
+Auther:- Atul v { MARK2-002 }

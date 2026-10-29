@@ -10,7 +10,7 @@
 #include "http.h"
 #include <modem/nrf_modem_lib.h>
 #include <nrf_modem.h>
-#include <nrf_socket.h> // <--- This defines nrf_in6_addr and NRF_AF_INET6
+#include <nrf_socket.h> 
 bool net_connected = false;
 int server_connection;
 bool ser_flag = 0;
@@ -18,21 +18,14 @@ int ser_retry = 0;
 uint8_t counter = 0;
 static K_SEM_DEFINE(lte_connected, 0, 1);
 LOG_MODULE_REGISTER(main_c, LOG_LEVEL_INF);
-
 uint16_t data[32];
 char text_data[] = "Hello This is testing of the text sending via HTTP POST ";
-
-/* Manually seting NAT64 dns for masking via Trex.fi {giving support for ipv4v6} */
 void set_manual_dns(void)
 {
 	int err;
-	// IPv6 Address of the NAT64 DNS (Trex.fi)
-	// 2001:67c:2b0::4
 	struct nrf_in6_addr dns_addr = {.s6_addr = {0x20, 0x01, 0x06, 0x7c, 0x02, 0xb0, 0x00, 0x00,
 												0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04}};
 
-	/*  1st arg: Family (NRF_AF_INET6)
-	 2nd arg: Pointer to the address */
 	err = nrf_setdnsaddr(NRF_AF_INET6, &dns_addr, sizeof(dns_addr));
 	if (err)
 	{
@@ -43,13 +36,10 @@ void set_manual_dns(void)
 		printk("Manual NAT64 DNS configured successfully!\n");
 	}
 }
-
-/* Event handler for LTE link control */
 static void lte_handler(const struct lte_lc_evt *const evt)
 {
 	switch (evt->type)
 	{
-	/* On changed registration status, print status */
 	case LTE_LC_EVT_NW_REG_STATUS:
 		if ((evt->nw_reg_status != LTE_LC_NW_REG_REGISTERED_HOME) &&
 			(evt->nw_reg_status != LTE_LC_NW_REG_REGISTERED_ROAMING))
@@ -59,12 +49,8 @@ static void lte_handler(const struct lte_lc_evt *const evt)
 		LOG_INF("Network registration status: %s",
 				evt->nw_reg_status == LTE_LC_NW_REG_REGISTERED_HOME ? "Connected - home network" : "Connected - roaming");
 		k_sem_give(&lte_connected);
-
-		/* status LED */
 		dk_set_led_on(DK_LED2);
-
 		break;
-	/* On event RRC update, print RRC mode */
 	case LTE_LC_EVT_RRC_UPDATE:
 		net_connected = 1;
 		LOG_INF("RRC mode: %s,%d", evt->rrc_mode == LTE_LC_RRC_MODE_CONNECTED ? "Connected" : "Idle", net_connected);
@@ -73,8 +59,6 @@ static void lte_handler(const struct lte_lc_evt *const evt)
 		break;
 	}
 }
-
-/* modem_configure() to initialize an LTE connection */
 static int modem_configure(void)
 {
 	int err;
@@ -104,7 +88,6 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 	{
 		if (server_connect() >= 0)
 		{
-			// client_http_put();
 			client_http_post_json(data);
 			counter++;
 		}
@@ -114,9 +97,6 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 
 		if (server_connect() >= 0)
 		{
-			// client_http_get();
-			// k_msleep(5000);
-			// client_http_put();
 			client_http_post_text(text_data);
 			counter++;
 		}
@@ -135,7 +115,6 @@ void lte_Connection()
 	{
 		LOG_INF("Initialized LEDs");
 	}
-	/* Call modem_configure() to initiate the LTE connection */
 	err = modem_configure();
 	if (err)
 	{
@@ -147,7 +126,6 @@ void lte_Connection()
 		LOG_INF("Modem configuration succesful.....");
 	}
 
-	/* Take the semaphore lte_connected */
 	k_sem_take(&lte_connected, K_FOREVER);
 	LOG_INF("Connected to LTE network");
 }

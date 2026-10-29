@@ -5,28 +5,21 @@
 #define EVENT_MASK (NET_EVENT_L4_CONNECTED | NET_EVENT_L4_DISCONNECTED)
 LOG_MODULE_REGISTER(http_c, LOG_LEVEL_INF);
 
-/* STEP 3 - Declare the necessary buffers for receiving messages */
 
 static char recv_buf[RECV_BUF_SIZE];
 static char client_id_buf[CLIENT_ID_SIZE + 2];
-
-/* STEP 4 - Define the variable for the counter as 0 */
 static int counter = 0;
 static int sock;
 static struct sockaddr_storage server;
-/* Both functions hould see this */
 static struct sockaddr_in6 server_addr;
-
 int server_resolve(void)
 {
     int err;
     struct addrinfo *result;
     struct addrinfo hints = {
-        .ai_family = AF_INET6, /* Force IPv6 for NAT64 */
+        .ai_family = AF_INET6, 
         .ai_socktype = SOCK_STREAM,
     };
-
-    /* Resolve the hostname (webhook.site) */
     err = getaddrinfo(CONFIG_HTTP_SAMPLE_HOSTNAME,
                       CONFIG_HTTP_SAMPLE_PORT,
                       &hints,
@@ -38,16 +31,10 @@ int server_resolve(void)
         return -EIO;
     }
 
-    /* 2. Copy the result into our GLOBAL IPv6 struct */
-    /* We use the correct struct type directly, no casting needed */
     memcpy(&server_addr, result->ai_addr, sizeof(struct sockaddr_in6));
-
-    /* Debug print */
     char ipv6_addr[NET_IPV6_ADDR_LEN];
     inet_ntop(AF_INET6, &server_addr.sin6_addr, ipv6_addr, sizeof(ipv6_addr));
     LOG_INF("IPv6 address resolved: %s", ipv6_addr);
-
-    /* Clean up */
     freeaddrinfo(result);
     return 0;
 }
@@ -55,9 +42,6 @@ int server_resolve(void)
 int server_connect(void)
 {
     int err;
-
-    /* 3. Create an IPv6 Socket */
-    /* IMPORTANT: We use AF_INET6 explicitly */
     sock = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 
     if (sock < 0)
@@ -67,8 +51,6 @@ int server_connect(void)
     }
 
     LOG_INF("Connecting to server...");
-
-    /* 4. Connect using the GLOBAL variable we filled in resolve() */
     err = connect(sock,
                   (struct sockaddr *)&server_addr,
                   sizeof(struct sockaddr_in6));
@@ -122,8 +104,6 @@ int client_http_post_json(int16_t data[])
     struct http_request req;
     memset(&req, 0, sizeof(req));
     static char buffer[512];
-
-    /* Headers for json Format */
     static char content_length[32];
     static const char *headers[] = {
         "Content-Type: application/json\r\n",
@@ -140,7 +120,7 @@ int client_http_post_json(int16_t data[])
 
     req.header_fields = headers;
     req.method = HTTP_POST;
-    req.url = CONFIG_HTTP_URL; /* Here the url at which you'll send the data */
+    req.url = CONFIG_HTTP_URL; 
     req.host = CONFIG_HTTP_SAMPLE_HOSTNAME;
     req.protocol = "HTTP/1.1";
     req.payload = buffer;
@@ -148,14 +128,12 @@ int client_http_post_json(int16_t data[])
     req.response = response_cb;
     req.recv_buf = recv_buf;
     req.recv_buf_len = sizeof(recv_buf);
-
     LOG_INF("HTTP POST request: %s", buffer);
     err = http_client_req(sock, &req, 5000, NULL);
     if (err < 0)
     {
         LOG_ERR("Failed to send HTTP POST request %s, err: %d", buffer, err);
     }
-
     return err;
 }
 
@@ -168,28 +146,21 @@ int client_http_post_text(char text_data[])
     static char buffer[1024];
     static char content_length[32];
 
-    /* Header fort text format */
-    // const char *headers[] = {"Connection: close\r\n", NULL};
     const char *headers[] = {
-        "Content-Type: text/plain\r\n", /* Tell server it is text */
-        content_length,                 /* Tell server how big it is */
+        "Content-Type: text/plain\r\n", 
+        content_length,                
         "Connection: close\r\n",
         NULL};
     strcpy(buffer, text_data);
-    /*This format is to send text to the http server*/
-    // bytes_written = snprintf(buffer, 1024, "Hello");	// buffer[0]=data;
-    // snprintf(buffer, 32, "%s",text_data);
-
     bytes_written = strlen(buffer);
     if (bytes_written < 0)
     {
         LOG_INF("Unable to write to buffer, err: %d", bytes_written);
         return bytes_written;
     }
-
     req.header_fields = headers;
     req.method = HTTP_POST;
-    req.url = CONFIG_HTTP_URL; /* Here the url at which you'll send the data */
+    req.url = CONFIG_HTTP_URL;
     req.host = CONFIG_HTTP_SAMPLE_HOSTNAME;
     req.protocol = "HTTP/1.1";
     req.payload = buffer;
@@ -197,7 +168,6 @@ int client_http_post_text(char text_data[])
     req.response = response_cb;
     req.recv_buf = recv_buf;
     req.recv_buf_len = sizeof(recv_buf);
-
     LOG_INF("HTTP POST request: %s", buffer);
     err = http_client_req(sock, &req, 5000, NULL);
     if (err < 0)
@@ -210,15 +180,12 @@ int client_http_post_text(char text_data[])
 
 int client_http_put(void)
 {
-    /* STEP 7 - Define the function to send a PUT request to the HTTP server */
     int err = 0;
     int bytes_written;
     struct http_request req;
     memset(&req, 0, sizeof(req));
     static char content_length[32];
     static char buffer[512];
-
-    /* 	Header For json file transfer */
     static const char *headers[] = {
         "Content-Type: application/json\r\n",
         content_length,
@@ -231,18 +198,6 @@ int client_http_put(void)
         return bytes_written;
     }
     snprintf(content_length, sizeof(content_length), "Content-Length: %d\r\n", bytes_written);
-
-    /* Header */
-    // const char *headers[] = {"Connection: close\r\n", NULL};
-    /* 	Header For text file transfer */
-    // char buffer[1024] = {};
-    // bytes_written = snprintf(buffer, 1024,"Hello",counter);
-    // if (bytes_written < 0)
-    // {
-    // 	LOG_INF("Unable to write to buffer, err: %d", bytes_written);
-    // 	return bytes_written;
-    // }
-
     req.header_fields = headers;
     req.method = HTTP_PUT;
     req.url = CONFIG_HTTP_URL;
@@ -270,7 +225,6 @@ int client_http_get(void)
     struct http_request req;
     memset(&req, 0, sizeof(req));
     const char *headers[] = {"Connection: close\r\n", NULL};
-
     req.header_fields = headers;
     req.method = HTTP_GET;
     req.url = CONFIG_HTTP_URL;
@@ -286,7 +240,6 @@ int client_http_get(void)
     {
         LOG_ERR("Failed to send HTTP GET request, err: %d", err);
     }
-
     return err;
 }
 
@@ -296,7 +249,6 @@ int client_get_new_id(void)
     struct http_request req;
     memset(&req, 0, sizeof(req));
     const char *headers[] = {"Connection: close\r\n", NULL};
-
     req.header_fields = headers;
     req.method = HTTP_POST;
     req.url = CONFIG_HTTP_URL;
@@ -305,8 +257,6 @@ int client_get_new_id(void)
     req.response = client_id_cb;
     req.recv_buf = recv_buf;
     req.recv_buf_len = sizeof(recv_buf);
-
-    /* Send the POST request to the HTTP server */
     LOG_INF("HTTP POST request");
     err = http_client_req(sock, &req, 5000, NULL);
     if (err < 0)
